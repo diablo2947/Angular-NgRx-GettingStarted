@@ -1,15 +1,9 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-
-import { Observable, Subscription } from 'rxjs';
+import { Component, OnInit } from '@angular/core';
+import { Observable } from 'rxjs';
+import { Store } from '@ngrx/store';
 
 import { Product } from '../product';
-import { ProductService } from '../product.service';
-import { Store } from '@ngrx/store';
-import {
-  getCurrentProduct,
-  showProductCodeSelector,
-  State,
-} from '../state/product.reducer';
+import * as Reducer from '../state/product.reducer';
 import * as ProductActions from '../state/product.actions';
 
 @Component({
@@ -17,35 +11,23 @@ import * as ProductActions from '../state/product.actions';
   templateUrl: './product-list.component.html',
   styleUrls: ['./product-list.component.css'],
 })
-export class ProductListComponent implements OnInit, OnDestroy {
+export class ProductListComponent implements OnInit {
   pageTitle = 'Products';
-  errorMessage: string;
+
+  errorMessage$: Observable<string> = this.store.select(Reducer.getError);
 
   displayCode$: Observable<boolean> = this.store.select(
-    showProductCodeSelector
+    Reducer.showProductCodeSelector
   );
 
-  products: Product[];
+  products$: Observable<Product[]> = this.store.select(Reducer.getProducts);
 
-  // Used to highlight the selected product in the list
-  selectedProduct$: Observable<Product> | null =
-    this.store.select(getCurrentProduct);
-  sub: Subscription;
+  selectedProduct$ = this.store.select(Reducer.getCurrentProduct);
 
-  constructor(
-    private store: Store<State>,
-    private productService: ProductService
-  ) {}
+  constructor(private store: Store<Reducer.State>) {}
 
   ngOnInit(): void {
-    this.productService.getProducts().subscribe({
-      next: (products: Product[]) => (this.products = products),
-      error: (err) => (this.errorMessage = err),
-    });
-  }
-
-  ngOnDestroy(): void {
-    this.sub.unsubscribe();
+    this.store.dispatch(ProductActions.loadProducts());
   }
 
   checkChanged(): void {
@@ -57,6 +39,8 @@ export class ProductListComponent implements OnInit, OnDestroy {
   }
 
   productSelected(product: Product): void {
-    this.store.dispatch(ProductActions.setCurrentProduct({ product }));
+    this.store.dispatch(
+      ProductActions.setCurrentProduct({ productId: product.id })
+    );
   }
 }

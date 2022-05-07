@@ -11,8 +11,9 @@ import { Product } from '../product';
 
 export interface ProductState extends AppState.State {
   showProductCode: boolean;
-  currentProduct: Product;
+  currentProductId: number | null;
   products: Product[];
+  error: string;
 }
 
 const getProductFeatureState = createFeatureSelector<ProductState>('products');
@@ -22,9 +23,36 @@ export const showProductCodeSelector = createSelector(
   (state) => state.showProductCode
 );
 
+export const getCurrentProductId = createSelector(
+  getProductFeatureState,
+  (state) => state.currentProductId
+);
+
 export const getCurrentProduct = createSelector(
   getProductFeatureState,
-  (state) => state.currentProduct
+  getCurrentProductId,
+  (state, currentProductId) => {
+    if (currentProductId === null) return null;
+    if (currentProductId != 0)
+      return state.products.find((x) => x.id === currentProductId);
+    return {
+      id: 0,
+      productName: '',
+      productCode: '',
+      description: '',
+      starRating: 5,
+    };
+  }
+);
+
+export const getProducts = createSelector(
+  getProductFeatureState,
+  (state) => state.products
+);
+
+export const getError = createSelector(
+  getProductFeatureState,
+  (state) => state.error
 );
 
 export interface State extends AppState.State {
@@ -33,8 +61,9 @@ export interface State extends AppState.State {
 
 const initialState: ProductState = {
   showProductCode: true,
-  currentProduct: null,
+  currentProductId: null,
   products: [],
+  error: '',
 };
 
 export const productReducer = createReducer<ProductState>(
@@ -48,25 +77,44 @@ export const productReducer = createReducer<ProductState>(
   on(ProductActions.setCurrentProduct, (state, action): ProductState => {
     return {
       ...state,
-      currentProduct: action.product,
+      currentProductId: action.productId,
     };
   }),
   on(ProductActions.initializeCurrentProduct, (state): ProductState => {
     return {
       ...state,
-      currentProduct: {
-        id: 0,
-        productName: '',
-        productCode: '',
-        description: '',
-        starRating: 5,
-      },
+      currentProductId: 0,
     };
   }),
   on(ProductActions.clearCurrentProduct, (state): ProductState => {
     return {
       ...state,
-      currentProduct: null,
+      currentProductId: null,
+    };
+  }),
+  on(ProductActions.loadProductsSuccess, (state, action): ProductState => {
+    return {
+      ...state,
+      products: action.products,
+    };
+  }),
+  on(ProductActions.loadProductsFailure, (state, action) => {
+    return { ...state, error: action.error };
+  }),
+  on(ProductActions.updateProductSuccess, (state, action) => {
+    const updatedProducts = state.products.map((x) =>
+      action.product.id === x.id ? action.product : x
+    );
+    return {
+      ...state,
+      products: updatedProducts,
+      error: '',
+    };
+  }),
+  on(ProductActions.updateProductFailure, (state, action) => {
+    return {
+      ...state,
+      error: action.error,
     };
   })
 );
