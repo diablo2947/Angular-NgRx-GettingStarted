@@ -5,8 +5,12 @@ import { Observable, Subscription } from 'rxjs';
 import { Product } from '../product';
 import { ProductService } from '../product.service';
 import { Store } from '@ngrx/store';
-import { showProductCodeSelector, State } from '../state/product.reducer';
-import { map } from 'rxjs/operators';
+import {
+  getCurrentProduct,
+  showProductCodeSelector,
+  State,
+} from '../state/product.reducer';
+import * as ProductActions from '../state/product.actions';
 
 @Component({
   selector: 'pm-product-list',
@@ -24,7 +28,8 @@ export class ProductListComponent implements OnInit, OnDestroy {
   products: Product[];
 
   // Used to highlight the selected product in the list
-  selectedProduct: Product | null;
+  selectedProduct$: Observable<Product> | null =
+    this.store.select(getCurrentProduct);
   sub: Subscription;
 
   constructor(
@@ -33,10 +38,6 @@ export class ProductListComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.sub = this.productService.selectedProductChanges$.subscribe(
-      (currentProduct) => (this.selectedProduct = currentProduct)
-    );
-
     this.productService.getProducts().subscribe({
       next: (products: Product[]) => (this.products = products),
       error: (err) => (this.errorMessage = err),
@@ -48,14 +49,14 @@ export class ProductListComponent implements OnInit, OnDestroy {
   }
 
   checkChanged(): void {
-    this.store.dispatch({ type: '[Product] Toggle Product Code' });
+    this.store.dispatch(ProductActions.toggleProductCode());
   }
 
   newProduct(): void {
-    this.productService.changeSelectedProduct(this.productService.newProduct());
+    this.store.dispatch(ProductActions.initializeCurrentProduct());
   }
 
   productSelected(product: Product): void {
-    this.productService.changeSelectedProduct(product);
+    this.store.dispatch(ProductActions.setCurrentProduct({ product }));
   }
 }
